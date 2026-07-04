@@ -1,3 +1,4 @@
+from sklearn.metrics.pairwise import cosine_similarity
 import os
 import joblib
 import pandas as pd
@@ -30,21 +31,7 @@ MODEL_DIR = os.path.join(
 # LOAD DATA
 # ==========================================================
 
-@st.cache_data
-def load_dataset():
-    df = pd.read_csv(DATA_PATH)
-    df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
-    return df
-
-
-@st.cache_data
-def load_rfm():
-    return pd.read_csv(RFM_PATH)
-
-
-# ==========================================================
-# LOAD MODELS
-# ==========================================================
+from sklearn.metrics.pairwise import cosine_similarity
 
 @st.cache_resource
 def load_models():
@@ -63,13 +50,6 @@ def load_models():
         )
     )
 
-    similarity = joblib.load(
-        os.path.join(
-            MODEL_DIR,
-            "similarity_matrix.pkl"
-        )
-    )
-
     product_list = joblib.load(
         os.path.join(
             MODEL_DIR,
@@ -77,10 +57,32 @@ def load_models():
         )
     )
 
+    df = load_dataset()
+
+    pivot = df.pivot_table(
+        index="CustomerID",
+        columns="Description",
+        values="Quantity",
+        aggfunc="sum",
+        fill_value=0
+    )
+
+    similarity = cosine_similarity(
+        pivot.T
+    )
+
+    import pandas as pd
+
+    similarity_df = pd.DataFrame(
+        similarity,
+        index=pivot.columns,
+        columns=pivot.columns
+    )
+
     return (
         kmeans,
         scaler,
-        similarity,
+        similarity_df,
         product_list
     )
 
